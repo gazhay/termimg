@@ -29,7 +29,9 @@ new_height    = int(new_width * height / width)
 
 if cols<width:
     # Don't scale up - it be fugly
-    opts.intr = True
+    opts.intr  = True
+    new_width  = width
+    new_height = height
 
 im.load()
 tempim        = Image.new("RGB", im.size, (255, 255, 255)) # Convert the image to RGB dropping alpha for white
@@ -39,7 +41,8 @@ im            = tempim                                     # temp replaces real
 if (opts.intr):
     pass                                                   # don't resize on keyboard mode
 else:
-    im = im.resize((new_width, new_height), Image.ANTIALIAS)
+    if width!=new_width:
+        im = im.resize((new_width, new_height), Image.ANTIALIAS)
 
 pixel_values = list(im.getdata())
 
