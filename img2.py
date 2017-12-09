@@ -27,7 +27,7 @@ width, height = im.size
 new_width     = cols
 new_height    = int(new_width * height / width)
 
-if cols<width:
+if width<cols:
     # Don't scale up - it be fugly
     opts.intr  = True
     new_width  = width
