@@ -27,6 +27,10 @@ width, height = im.size
 new_width     = cols
 new_height    = int(new_width * height / width)
 
+if cols<width:
+    # Don't scale up - it be fugly
+    opts.intr = True
+
 im.load()
 tempim        = Image.new("RGB", im.size, (255, 255, 255)) # Convert the image to RGB dropping alpha for white
 tempim.paste(im, mask=im.split()[3])                       # drop 4th[3] channel
