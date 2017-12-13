@@ -4,8 +4,6 @@ from PIL import Image
 import argparse,math
 import shutil,warnings,os
 
-#convert magick:wizard -colorspace Gray -colors 2 colorspace-gray-colors-2.bmp
-
 parser = argparse.ArgumentParser()
 parser.add_argument('file')
 parser.add_argument('-x' , "--xzoom",  action="store"      , dest="xoff", type=int,  default=0, help="Zoom Offset X")
@@ -160,6 +158,7 @@ if (opts.intr):
 # draw zoom 1, 0,0
 # allow keyboard input, arrows or wasd, and move +cols/2 or -lines/2
 # repetez vous
+## tput smcup
   controlfuse=False
   def getchar():
       global controlfuse
@@ -217,11 +216,11 @@ if (opts.intr):
               thiscolor = im.getpixel((x,y))
               print(int2ansi(rgb2ansi(thiscolor)), end='')
               print(" ",end='')
-          print('\033[0m',end='') # Reset colors
+       print('\033[0m',end='', flush=True) # Reset colors
        needRedraw=False
        # print("%d %d" % (xoff,yoff))
     key = getchar()
-
+    ## tput rmcup
 else:
     if opts.bawb:
         # Braille Mode
