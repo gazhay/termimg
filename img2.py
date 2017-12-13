@@ -21,7 +21,12 @@ parser.add_argument('-d' , "--debug" , action="store_true" , dest="debg", defaul
 parser.add_argument('--version', action='version', version='%(prog)s 1.0')
 warnings.simplefilter('ignore', Image.DecompressionBombWarning)
 opts          = parser.parse_args()
-im            = Image.open(opts.file).convert('RGBA')      # Open a file, convert it to RGBA if possible
+try:
+	im            = Image.open(opts.file).convert('RGBA')      # Open a file, convert it to RGBA if possible
+except:
+	print("Could not open file "+opts.file)
+	exit(1)
+	
 mysize        = shutil.get_terminal_size((80, 20))         # Terminal falls back to 80x20
 if opts.widt>0:
     cols      = opts.widt
