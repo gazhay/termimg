@@ -4,6 +4,8 @@ from PIL import Image
 import argparse,math
 import shutil
 
+#convert magick:wizard -colorspace Gray -colors 2 colorspace-gray-colors-2.bmp
+
 parser = argparse.ArgumentParser()
 parser.add_argument('file')
 parser.add_argument('-x' , "--xzoom", action="store"      , dest="xoff", type=int,  default=0, help="Zoom Offset X")
@@ -11,8 +13,9 @@ parser.add_argument('-y' , "--yzoom", action="store"      , dest="yoff", type=in
 parser.add_argument('-b' , "--box",   action="store_true" , dest="boxm", default=False, help="Restrict Rows")
 parser.add_argument('-i' , "--scan",  action="store_true" , dest="intr", default=False, help="Interactive Mode")
 parser.add_argument('-t' , "--true",  action="store_false", dest="tcol", default=True , help="Turn off terminal true colour mode")
-parser.add_argument('-s' , "--squish",action="store_false", dest="sqsh", default=True, help="Use unicode half blocks to reduce size")
+parser.add_argument('-s' , "--squish",action="store_false", dest="sqsh", default=True , help="Use unicode half blocks to reduce size")
 parser.add_argument('-w' , "--width", action="store"      , dest="widt", type=int,  default=0, help="Width for pipers")
+parser.add_argument('-1' , "--braile", action="store_true", dest="bawb", default=False, help="We need a 1bit repr in braille")
 parser.add_argument('--version', action='version', version='%(prog)s 1.0')
 opts          = parser.parse_args()
 im            = Image.open(opts.file).convert('RGBA')      # Open a file, convert it to RGBA if possible
@@ -29,20 +32,28 @@ new_height    = int(new_width * height / width)
 
 if width<cols:
     # Don't scale up - it be fugly
-    opts.intr  = True
-    new_width  = width
+    # opts.intr  = True
+    new_width  = width 
     new_height = height
 
 im.load()
-tempim        = Image.new("RGB", im.size, (255, 255, 255)) # Convert the image to RGB dropping alpha for white
+tempim         = Image.new("RGB", im.size, (255, 255, 255)) # Convert the image to RGB dropping alpha for white
 tempim.paste(im, mask=im.split()[3])                       # drop 4th[3] channel
+if opts.bawb:
+    new_width  = (cols * 2)
+    new_height = int(new_width * height / width)
+    if width<cols:
+        new_width  = width  * 2
+        new_height = height * 2
 
-im            = tempim                                     # temp replaces real
+im             = tempim                                     # temp replaces real
 if (opts.intr):
     pass                                                   # don't resize on keyboard mode
 else:
     if width!=new_width:
         im = im.resize((new_width, new_height), Image.ANTIALIAS)
+        if opts.bawb:
+            im     = im.convert('1',dither=Image.FLOYDSTEINBERG)
 
 pixel_values = list(im.getdata())
 
@@ -94,6 +105,14 @@ def scrollbar(wherex,wherey,xbar=False,ybar=False):
                 char="\033[47m \033[0m"
             print("\033[%d;%df%s"%(yval,row,char),end='')
 
+def pattern2ascii(inpat):
+    pixels  = ((0x01, 0x08),(0x02, 0x10),(0x04, 0x20),(0x40, 0x80))
+    outChar = 0x2800
+    for yp in range(0,3):
+        for xp in range(0,1):
+            if (inpat[yp][xp]==0):
+                outChar |= pixels[yp][xp]
+    return chr(outChar)
 
 if (opts.intr):
 # Interactive mode
@@ -164,25 +183,40 @@ if (opts.intr):
     key = getchar()
 
 else:
-    # Non-interactive mode
-    steppy = 1               # One line at a time
-    if opts.sqsh: steppy = 2 # Unicode squishy mode, step 2 lines at a time
-    for y in range(0,int(new_height), steppy):
-        for x in range(0,int(new_width)):
-            if opts.sqsh:
-                # Squish mode, get 2 colors, fore top half, back lower
-                forecolor = int2ansi(rgb2ansi(im.getpixel((x,y)) ), fore=False)
-                try:
-                    backcolor = int2ansi(rgb2ansi(im.getpixel((x,y+1))))
-                except:
-                    # most likely an odd number of lines, use white
-                    backcolor = int2ansi(rgb2ansi( (255,255,255) ))
-                print(forecolor+backcolor, end='')
-                print(u"\u2580",end='')
-            else:
-                thiscolor = int2ansi(rgb2ansi(im.getpixel((x,y))))
-                print(thiscolor,end='')
-                print(" ",end='')
-        print('\033[0m')
+    if opts.bawb:
+        # Braille Mode
+        steppy = 4               # One line at a time
+        for y in range(0,int(new_height), steppy):
+            for x in range(0,int(new_width), 2):
+                thispattern=[[0,0],[0,0],[0,0],[0,0]]
+                for yp in range(0,4):
+                    for xp in range(0,2):
+                        try:
+                            thispattern[yp][xp]=im.getpixel((x+xp,y+yp))
+                        except:
+                            thispattern[yp][xp]=0
+                print(pattern2ascii(thispattern), end="")
+            print("")
+    else:
+        # Non-interactive mode
+        steppy = 1               # One line at a time
+        if opts.sqsh: steppy = 2 # Unicode squishy mode, step 2 lines at a time
+        for y in range(0,int(new_height), steppy):
+            for x in range(0,int(new_width)):
+                if opts.sqsh:
+                    # Squish mode, get 2 colors, fore top half, back lower
+                    forecolor = int2ansi(rgb2ansi(im.getpixel((x,y)) ), fore=False)
+                    try:
+                        backcolor = int2ansi(rgb2ansi(im.getpixel((x,y+1))))
+                    except:
+                        # most likely an odd number of lines, use white
+                        backcolor = int2ansi(rgb2ansi( (255,255,255) ))
+                    print(forecolor+backcolor, end='')
+                    print(u"\u2580",end='')
+                else:
+                    thiscolor = int2ansi(rgb2ansi(im.getpixel((x,y))))
+                    print(thiscolor,end='')
+                    print(" ",end='')
+            print('\033[0m')
 
 
