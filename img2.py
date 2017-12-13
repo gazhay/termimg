@@ -16,6 +16,7 @@ parser.add_argument('-t' , "--true",  action="store_false", dest="tcol", default
 parser.add_argument('-s' , "--squish",action="store_false", dest="sqsh", default=True , help="Use unicode half blocks to reduce size")
 parser.add_argument('-w' , "--width", action="store"      , dest="widt", type=int,  default=0, help="Width for pipers")
 parser.add_argument('-1' , "--braile", action="store_true", dest="bawb", default=False, help="We need a 1bit repr in braille")
+parser.add_argument('-p' , "--patana", action="store_true", dest="pata", default=False, help="Patana mode")
 parser.add_argument('--version', action='version', version='%(prog)s 1.0')
 opts          = parser.parse_args()
 im            = Image.open(opts.file).convert('RGBA')      # Open a file, convert it to RGBA if possible
@@ -39,7 +40,7 @@ if width<cols:
 im.load()
 tempim         = Image.new("RGB", im.size, (255, 255, 255)) # Convert the image to RGB dropping alpha for white
 tempim.paste(im, mask=im.split()[3])                       # drop 4th[3] channel
-if opts.bawb:
+if opts.bawb or opts.pata:
     new_width  = (cols * 2)
     new_height = int(new_width * height / width)
     if width<cols:
@@ -52,8 +53,8 @@ if (opts.intr):
 else:
     if width!=new_width:
         im = im.resize((new_width, new_height), Image.ANTIALIAS)
-        if opts.bawb:
-            im     = im.convert('1',dither=Image.FLOYDSTEINBERG)
+        if opts.bawb or opts.pata:
+            im = im.convert('1',dither=Image.FLOYDSTEINBERG)
 
 pixel_values = list(im.getdata())
 
@@ -113,6 +114,28 @@ def pattern2ascii(inpat):
             if (inpat[yp][xp]==0):
                 outChar |= pixels[yp][xp]
     return chr(outChar)
+
+def patana2ascii(inpat):
+  ((a,b),(c,d))=inpat
+  patts={
+    "0000" : 0x20,
+    "0001" : 0x259D,
+    "0010" : 0x2596,
+    "0011" : 0x2584,
+    "0100" : 0x259D,
+    "0101" : 0x2590,
+    "0110" : 0x259E,
+    "0111" : 0x259F,
+    "1000" : 0x2598,
+    "1001" : 0x259A,
+    "1010" : 0x258C,
+    "1011" : 0x2599,
+    "1100" : 0x2580,
+    "1101" : 0x259C,
+    "1110" : 0x259B,
+    "1111" : 0x2588
+    }
+  return chr(patts[(str(a)+str(b)+str(c)+str(d))])
 
 if (opts.intr):
 # Interactive mode
@@ -196,6 +219,18 @@ else:
                         except:
                             thispattern[yp][xp]=0
                 print(pattern2ascii(thispattern), end="")
+            print("")
+    elif opts.pata:
+        for y in range(0,int(new_height), 2):
+            for x in range(0,int(new_width), 2):
+                thispattern=[[0,0],[0,0]]
+                for yp in range(0,2):
+                    for xp in range(0,2):
+                        try:
+                            thispattern[yp][xp]=0 if (im.getpixel((x+xp,y+yp))>1) else 1
+                        except:
+                          thispattern[yp][xp]=1
+                print(patana2ascii(thispattern), end="")
             print("")
     else:
         # Non-interactive mode
