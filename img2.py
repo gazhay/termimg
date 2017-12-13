@@ -2,7 +2,7 @@
 
 from PIL import Image
 import argparse,math
-import shutil
+import shutil,warnings
 
 #convert magick:wizard -colorspace Gray -colors 2 colorspace-gray-colors-2.bmp
 
@@ -19,6 +19,7 @@ parser.add_argument('-1' , "--braile", action="store_true" , dest="bawb", defaul
 parser.add_argument('-p' , "--patana", action="store_true" , dest="pata", default=False, help="Patana mode")
 parser.add_argument('-d' , "--debug" , action="store_true" , dest="debg", default=False, help="Save intermediate docs")
 parser.add_argument('--version', action='version', version='%(prog)s 1.0')
+warnings.simplefilter('ignore', Image.DecompressionBombWarning)
 opts          = parser.parse_args()
 im            = Image.open(opts.file).convert('RGBA')      # Open a file, convert it to RGBA if possible
 mysize        = shutil.get_terminal_size((80, 20))         # Terminal falls back to 80x20
