@@ -8,15 +8,16 @@ import shutil
 
 parser = argparse.ArgumentParser()
 parser.add_argument('file')
-parser.add_argument('-x' , "--xzoom", action="store"      , dest="xoff", type=int,  default=0, help="Zoom Offset X")
-parser.add_argument('-y' , "--yzoom", action="store"      , dest="yoff", type=int,  default=0, help="Zoom Offset Y")
-parser.add_argument('-b' , "--box",   action="store_true" , dest="boxm", default=False, help="Restrict Rows")
-parser.add_argument('-i' , "--scan",  action="store_true" , dest="intr", default=False, help="Interactive Mode")
-parser.add_argument('-t' , "--true",  action="store_false", dest="tcol", default=True , help="Turn off terminal true colour mode")
-parser.add_argument('-s' , "--squish",action="store_false", dest="sqsh", default=True , help="Use unicode half blocks to reduce size")
-parser.add_argument('-w' , "--width", action="store"      , dest="widt", type=int,  default=0, help="Width for pipers")
-parser.add_argument('-1' , "--braile", action="store_true", dest="bawb", default=False, help="We need a 1bit repr in braille")
-parser.add_argument('-p' , "--patana", action="store_true", dest="pata", default=False, help="Patana mode")
+parser.add_argument('-x' , "--xzoom",  action="store"      , dest="xoff", type=int,  default=0, help="Zoom Offset X")
+parser.add_argument('-y' , "--yzoom",  action="store"      , dest="yoff", type=int,  default=0, help="Zoom Offset Y")
+parser.add_argument('-b' , "--box",    action="store_true" , dest="boxm", default=False, help="Restrict Rows")
+parser.add_argument('-i' , "--scan",   action="store_true" , dest="intr", default=False, help="Interactive Mode")
+parser.add_argument('-t' , "--true",   action="store_false", dest="tcol", default=True , help="Turn off terminal true colour mode")
+parser.add_argument('-s' , "--squish", action="store_false", dest="sqsh", default=True , help="Use unicode half blocks to reduce size")
+parser.add_argument('-w' , "--width",  action="store"      , dest="widt", type=int,  default=0, help="Width for pipers")
+parser.add_argument('-1' , "--braile", action="store_true" , dest="bawb", default=False, help="We need a 1bit repr in braille")
+parser.add_argument('-p' , "--patana", action="store_true" , dest="pata", default=False, help="Patana mode")
+parser.add_argument('-d' , "--debug" , action="store_true" , dest="debg", default=False, help="Save intermediate docs")
 parser.add_argument('--version', action='version', version='%(prog)s 1.0')
 opts          = parser.parse_args()
 im            = Image.open(opts.file).convert('RGBA')      # Open a file, convert it to RGBA if possible
@@ -42,7 +43,8 @@ tempim         = Image.new("RGB", im.size, (255, 255, 255)) # Convert the image 
 tempim.paste(im, mask=im.split()[3])                       # drop 4th[3] channel
 if opts.bawb or opts.pata:
     new_width  = (cols * 2)
-    new_height = int(new_width * height / width)
+    heightscale = 2 if opts.pata else 1
+    new_height = int((new_width * height / width)/ heightscale)
     if width<cols:
         new_width  = width  * 2
         new_height = height * 2
@@ -54,7 +56,13 @@ else:
     if width!=new_width:
         im = im.resize((new_width, new_height), Image.ANTIALIAS)
         if opts.bawb or opts.pata:
-            im = im.convert('1',dither=Image.FLOYDSTEINBERG)
+            im = im.convert('1',dither=Image.FLOYDSTEINBERG) # For dithering to B&W
+
+if not opts.tcol:
+  im = im.convert('P', palette=Image.WEB)      # If we are in dithermode
+  if opts.debg:
+    im.save("debug.png")
+  im = im.convert("RGB")                       # Just cheat and convert it back
 
 pixel_values = list(im.getdata())
 
