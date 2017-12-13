@@ -2,7 +2,7 @@
 
 from PIL import Image
 import argparse,math
-import shutil,warnings
+import shutil,warnings,os
 
 #convert magick:wizard -colorspace Gray -colors 2 colorspace-gray-colors-2.bmp
 
@@ -26,7 +26,10 @@ try:
 except:
 	print("Could not open file "+opts.file)
 	exit(1)
-	
+
+if "SSH_CONNECTION" in os.environ:
+	opts.tcol = not opts.tcol
+
 mysize        = shutil.get_terminal_size((80, 20))         # Terminal falls back to 80x20
 if opts.widt>0:
     cols      = opts.widt
